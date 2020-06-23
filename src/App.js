@@ -1,6 +1,5 @@
 // External
 import React from "react";
-import axios from "axios";
 import {
   BrowserRouter as Router,
   Switch,
@@ -14,78 +13,52 @@ import Home from "./views/home/Home.jsx";
 
 // Utils
 import { getCookie, setCookie } from "./utils/cookies";
+import { getID, getName } from "./utils/requests";
 
-function App() {
-  checkID();
-  return (
-    <Router>
-      <div>
-        <nav>
-          <ul>
-            <li>
-              <Link to="/">Home</Link>
-            </li>
-            <li>
-              <Link to="/about">About</Link>
-            </li>
-            <li>
-              <Link to="/users">Users</Link>
-            </li>
-          </ul>
-        </nav>
-        <Switch>
-          <Route path="/about">
-            <About />
-          </Route>
-          <Route path="/users">
-            <Users />
-          </Route>
-          <Route path="/id/:id">
-            <Test></Test>
-          </Route>
-          <Route path="/">
-            <Home name={getCookie("id")} />
-          </Route>
-        </Switch>
-      </div>
-    </Router>
-  );
-}
+class App extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { id: undefined, name: undefined };
+  }
 
-function About() {
-  return <h2>About</h2>;
-}
+  componentWillMount() {
+    checkAndSetID()
+      .then(([id, name]) => {
+        this.setState({ id, name });
+      })
+      .catch((e) => console.error(e));
+  }
 
-function Users() {
-  return <h2>Users</h2>;
-}
-
-function Test() {
-  let { id } = useParams();
-  return <h2>{id}</h2>;
-}
-
-async function checkID() {
-  if (!getCookie("id")) {
-    try {
-      const id = await getID();
-      setCookie("id", id);
-    } catch (e) {
-      console.error(e);
-    }
+  render() {
+    return (
+      <Router>
+        <div>
+          <Switch>
+            <Route path="/">
+              <Home id={this.state.id} name={this.state.name} />
+            </Route>
+          </Switch>
+        </div>
+      </Router>
+    );
   }
 }
 
-function getID() {
-  return new Promise((resolve, reject) => {
-    axios
-      .get("/getid")
-      .then(function (response) {
-        resolve(response.data.id);
-      })
-      .catch(function (error) {
-        reject(error);
-      });
+function checkAndSetID() {
+  return new Promise(async (resolve, reject) => {
+    const myID = getCookie("id");
+    if (!myID) {
+      try {
+        const [id, name] = await getID(prompt("Vad heter du?"));
+        setCookie("id", id);
+        resolve([id, name]);
+      } catch (e) {
+        reject(e);
+      }
+    } else {
+      const [id, name] = await getName(myID);
+      resolve([id, name]);
+    }
   });
 }
 
